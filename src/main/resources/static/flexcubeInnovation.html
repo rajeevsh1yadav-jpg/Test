@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlexcubeInnovation Account Dashboard</title>
+<style>
+    body { font-family: Arial, sans-serif; background: #f5f7fa; margin:0; padding:0; }
+    .container { max-width: 900px; margin: 30px auto; background: #fff; padding:25px; border-radius:8px; box-shadow:0 0 15px rgba(0,0,0,0.1);}
+    h1 { text-align:center; color:#333;}
+    label { display:block; margin-top:10px; font-weight:bold;}
+    input { width:100%; padding:8px; margin-top:5px; border-radius:4px; border:1px solid #ccc; }
+    input:disabled { background: #e9ecef; }
+    button { margin-top:10px; padding:8px 12px; border:none; border-radius:4px; background-color:#007BFF; color:#fff; cursor:pointer; }
+    button:hover { background-color: #0056b3; }
+    .response { margin-top:15px; padding:15px; background:#e9ecef; border-radius:4px; white-space:pre-wrap; min-height:50px; }
+    .error { background-color: #f8d7da; color: #721c24; }
+    .success { background-color: #d4edda; color: #155724; }
+    table { width:100%; border-collapse: collapse; margin-top:20px; }
+    th, td { border:1px solid #ccc; padding:8px; text-align:center; }
+    th { background:#007BFF; color:#fff; }
+    .action-btn { padding:4px 8px; margin:2px; font-size:0.9em; }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>FlexcubeInnovation Account Dashboard</h1>
+
+    <div>
+        <label>Account ID</label>
+        <input type="number" id="accountId">
+    </div>
+    <div>
+        <label>Full Name</label>
+        <input type="text" id="fullName">
+    </div>
+    <div>
+        <label>Status</label>
+        <input type="text" id="status">
+    </div>
+    <div>
+        <label>Open Date</label>
+        <input type="date" id="openDate">
+    </div>
+    <div>
+        <label>Available Balance</label>
+        <input type="number" id="balance">
+    </div>
+
+    <div style="margin-top:10px;">
+        <button onclick="createAccount()">Create</button>
+        <button onclick="getAccountById()">Get Account</button>
+        <button onclick="getAllAccounts()">Get All</button>
+        <button onclick="updateAccount()">Update</button>
+        <button onclick="deleteAccount()">Delete</button>
+        <button onclick="resetFields()">Reset</button>
+    </div>
+
+    <div class="response" id="serverResponse">Server response will appear here...</div>
+
+    <table id="accountTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Full Name</th>
+                <th>Status</th>
+                <th>Open Date</th>
+                <th>Balance</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script>
+const baseUrl = '/api/accounts';
+
+async function createAccount() {
+    const payload = getInputData();
+    if (!payload.fullName || !payload.accountStatus) { showResponse('Full Name & Status required','error'); return; }
+
+    const res = await fetch(baseUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const data = await res.json();
+    showResponse(JSON.stringify(data,null,2),'success');
+    resetFields(true);
+    getAllAccounts();
+}
+
+async function getAccountById() {
+    const id = document.getElementById('accountId').value;
+    if (!id) { showResponse('Account ID required','error'); return; }
+
+    const res = await fetch(`${baseUrl}/${id}`);
+    if (!res.ok) { showResponse(await res.text(),'error'); return; }
+
+    const data = await res.json();
+    showResponse(JSON.stringify(data,null,2),'success');
+    fillFields(data);
+}
+
+async function getAllAccounts() {
+    const res = await fetch(baseUrl);
+    const data = await res.json();
+    populateTable(data);
+}
+
+async function updateAccount() {
+    const id = document.getElementById('accountId').value;
+    if (!id) { showResponse('Account ID required for update','error'); return; }
+
+    const payload = getInputData();
+    const res = await fetch(`${baseUrl}/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+    if (!res.ok) { showResponse(await res.text(),'error'); return; }
+    const data = await res.json();
+    showResponse(JSON.stringify(data,null,2),'success');
+    resetFields();
+    getAllAccounts();
+}
+
+async function deleteAccount() {
+    const id = document.getElementById('accountId').value;
+    if (!id) { showResponse('Account ID required for delete','error'); return; }
+    const res = await fetch(`${baseUrl}/${id}`,{method:'DELETE'});
+    const text = await res.text();
+    if(!res.ok) showResponse(text,'error'); else showResponse(text,'success');
+    resetFields();
+    getAllAccounts();
+}
+
+// ---------------------
+// Helper Functions
+// ---------------------
+function getInputData() {
+    return {
+        fullName: document.getElementById('fullName').value,
+        accountStatus: document.getElementById('status').value,
+        acctOpenDate: document.getElementById('openDate').value,
+        availBal: parseInt(document.getElementById('balance').value)||0
+    };
+}
+
+function showResponse(message,type='success') {
+    const resp=document.getElementById('serverResponse');
+    resp.textContent=message;
+    resp.className='response '+(type==='error'?'error':'success');
+}
+
+// Fill fields for Update (all editable except ID)
+function fillFields(data){
+    document.getElementById('accountId').value=data.accountId;
+    document.getElementById('fullName').value=data.fullName;
+    document.getElementById('status').value=data.accountStatus;
+    document.getElementById('openDate').value=data.acctOpenDate;
+    document.getElementById('balance').value=data.availBal;
+
+    document.getElementById('accountId').disabled=false;
+    document.getElementById('fullName').disabled=false;
+    document.getElementById('status').disabled=false;
+    document.getElementById('openDate').disabled=false;
+    document.getElementById('balance').disabled=false;
+}
+
+function resetFields(createReset=false){
+    document.getElementById('accountId').value='';
+    document.getElementById('fullName').value='';
+    document.getElementById('status').value='';
+    document.getElementById('openDate').value='';
+    document.getElementById('balance').value='';
+    if(!createReset){
+        document.getElementById('fullName').disabled=true;
+        document.getElementById('status').disabled=true;
+        document.getElementById('openDate').disabled=true;
+        document.getElementById('balance').disabled=true;
+    }
+}
+
+// Populate Table
+function populateTable(data){
+    const tbody=document.querySelector('#accountTable tbody');
+    tbody.innerHTML='';
+    data.forEach(acc=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`
+            <td>${acc.accountId}</td>
+            <td>${acc.fullName}</td>
+            <td>${acc.accountStatus}</td>
+            <td>${acc.acctOpenDate}</td>
+            <td>${acc.availBal}</td>
+            <td>
+                <button class="action-btn" onclick='editFromTable(${JSON.stringify(acc)})'>Edit</button>
+                <button class="action-btn" onclick='deleteFromTable(${acc.accountId})'>Delete</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Edit from table row
+function editFromTable(acc){
+    fillFields(acc);
+}
+
+// Delete from table row
+function deleteFromTable(id){
+    document.getElementById('accountId').value=id;
+    deleteAccount();
+}
+
+// Initial load
+getAllAccounts();
+</script>
+</body>
+</html>
