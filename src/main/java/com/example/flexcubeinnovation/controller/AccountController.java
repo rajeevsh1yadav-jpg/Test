@@ -20,7 +20,7 @@ public class AccountController {
 	private AccountService service;
 
 	
-	@GetMapping("/Welcome")
+	@GetMapping("/welcome")
 	public String getHome(Model model) {
 		return "redirect : index.html";
 	}
